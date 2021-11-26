@@ -167,6 +167,7 @@ module.exports = {
       const gogApiUrl = `https://www.gog.com/games/ajax/filtered?mediaType=game&${qs.stringify(
         params
       )}`;
+
       const {
         data: { products },
       } = await axios.get(gogApiUrl);
