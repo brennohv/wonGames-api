@@ -1,0 +1,22 @@
+{
+  "kind": "collectionType",
+  "collectionName": "wishlists",
+  "info": {
+    "name": "Wishlist"
+  },
+  "options": {
+    "increments": true,
+    "timestamps": true,
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "user": {
+      "plugin": "users-permissions",
+      "model": "user"
+    },
+    "games": {
+      "collection": "game"
+    }
+  }
+}
