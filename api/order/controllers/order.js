@@ -1,5 +1,7 @@
 'use strict';
 
+const { sanitizeEntity } = require("strapi-utils/lib");
+
 const stripe = require("stripe")(process.env.STRIPE_KEY)
 
 
@@ -7,19 +9,7 @@ module.exports = {
   createPaymentIntent: async (ctx) => {
     const { cart } = ctx.request.body;
 
-    let games = [];
-
-    await Promise.all(
-      cart?.map(async (game) => {
-        const validatedGame = await strapi.services.game.findOne({
-          id: game.id,
-        });
-
-        if (validatedGame) {
-          games.push(validatedGame);
-        }
-      })
-    );
+    const games = await strapi.config.functions.cart.cartItems(cart)
 
     if(!games.length) {
       ctx.response.status = 404
@@ -28,9 +18,7 @@ module.exports = {
       }
     };
 
-    const total = games.reduce((acc, game) => {
-      return acc + game.price
-    }, 0);
+    const total = await strapi.config.functions.cart.cartTotal(games)
 
     if(total === 0) {
       return {
@@ -40,7 +28,7 @@ module.exports = {
 
     try {
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: total * 100,
+        amount: total ,
         currency: "eur",
         automatic_payment_methods: {
           enabled: true,
@@ -70,12 +58,31 @@ module.exports = {
     const userInfo = await strapi.query("user", "users-permissions").findOne({ id: userId});
 
     // pegar os jogos
+
+    const games = await strapi.config.functions.cart.cartItems(cart)
+
     // pegar o total (saber se é free ou nao)
+    const total_in_cents = await strapi.config.functions.cart.cartTotal(games)
+
     // pegar o paymentIntentId
     // pegar as infromações do pagamento (paymentMethod)
+
     // salvar no banco
+    // pego a estrutura de orders no contentType do strapi e monto os filds passando os dados recebidos
+    const entry = {
+      total_in_cents,
+      payment_intent_id: paymentIntentId,
+      card_brand: null,
+      card_last4: null,
+      user: userInfo,
+      games
+    }
+
+    //agora faço a criação com os dados acima
+    const entity = await strapi.services.order.create(entry)
+
     // enviar um email de compra para o usuario
 
-    return {cart, paymentIntentId, paymentMethod, userInfo}
+    return sanitizeEntity(entity, {model: strapi.models.order})
   }
 };
