@@ -30,9 +30,6 @@ module.exports = {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: total ,
         currency: "eur",
-        automatic_payment_methods: {
-          enabled: true,
-        },
       });
 
       return paymentIntent
@@ -58,7 +55,6 @@ module.exports = {
     const userInfo = await strapi.query("user", "users-permissions").findOne({ id: userId});
 
     // pegar os jogos
-
     const games = await strapi.config.functions.cart.cartItems(cart)
 
     // pegar o total (saber se é free ou nao)
@@ -66,14 +62,27 @@ module.exports = {
 
     // pegar o paymentIntentId
     // pegar as infromações do pagamento (paymentMethod)
+    let paymentInfo;
+    if(total_in_cents !== 0) {
+
+      try {
+        paymentInfo = await stripe.paymentMethods.retrieve(
+          paymentMethod
+        );
+      } catch (err) {
+        ctx.response.status = 402
+        return { error: err.message }
+      }
+
+    }
 
     // salvar no banco
     // pego a estrutura de orders no contentType do strapi e monto os filds passando os dados recebidos
     const entry = {
       total_in_cents,
       payment_intent_id: paymentIntentId,
-      card_brand: null,
-      card_last4: null,
+      card_brand: paymentInfo?.card?.brand,
+      card_last4: paymentInfo?.card?.last4,
       user: userInfo,
       games
     }
